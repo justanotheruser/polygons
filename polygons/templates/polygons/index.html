@@ -1,0 +1,9 @@
+{% if polygon_list %}
+    <ul>
+    {% for polygon in polygon_list %}
+        <li><a href="{% url 'polygons:detail' polygon.id %}">{{polygon.name}}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No polygons are available</p>
+{% endif %}

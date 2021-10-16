@@ -1,10 +1,18 @@
 from django.http import HttpResponse
+from django.shortcuts import render
+from rest_framework.views import APIView
 from .models import Session, GisPolygon
 
 
-def index(request):
-    with Session() as session:
-        result = session.query(GisPolygon).all()
-        for row in result:
-            print(row)
-    return HttpResponse("List of all polygons")
+class IndexView(APIView):
+    def get(self, request):
+        with Session() as session:
+            polygon_list = session.query(GisPolygon).all()
+            context = {'polygon_list': polygon_list}
+            return render(request, 'polygons/index.html', context)
+
+
+class DetailView(APIView):
+    def get(self, request, polygon_id):
+        return HttpResponse(f'Info about polygon {polygon_id}')
+        

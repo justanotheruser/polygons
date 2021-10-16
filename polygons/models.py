@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 
 
 engine = create_engine(
-    f'postgresql://postgres:{os.environ["POSTGRES_PASS"]}@localhost:5432/postgis_31_sample')
+    f'postgresql://postgres:{os.environ["POSTGRES_PASS"]}@localhost:5432/{os.environ["POSTGRES_DB"].strip()}')
 Session = sessionmaker(engine)
 Base = declarative_base()
 
