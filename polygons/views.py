@@ -63,10 +63,20 @@ class DetailView(APIView):
                     return Response(status=status.HTTP_404_NOT_FOUND)
                 stream = io.BytesIO(request.body)
                 data = JSONParser().parse(stream)
-                serializer = GisPolygonSerializerEPSG_4326(existing_polygon, data=data)
+                serializer = GisPolygonSerializerEPSG_4326(
+                    existing_polygon, data=data)
                 if not serializer.is_valid():
                     return Response(serializer.errors,
                                     status=status.HTTP_400_BAD_REQUEST)
                 polygon = serializer.save()
                 session.add(polygon)
-                return Response(status=status.HTTP_200_OK)
+            return Response(status=status.HTTP_200_OK)
+
+    def delete(self, request, polygon_id):
+        with Session() as session:
+            with session.begin():
+                polygon = session.get(GisPolygon, polygon_id)
+                if not polygon:
+                    return Response(status=status.HTTP_404_NOT_FOUND)
+                session.delete(polygon)
+            return Response(status=status.HTTP_200_OK)

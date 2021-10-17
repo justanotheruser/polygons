@@ -55,7 +55,7 @@ class GisPolygonSerializer(serializers.Serializer):
         read_only=True, format='%Y-%m-%d %H:%M:%S.%f')
     id = serializers.IntegerField(read_only=True)
     class_id = serializers.IntegerField(required=False)
-    name = serializers.CharField(max_length=200)
+    name = serializers.CharField(max_length=65535)
     props = serializers.JSONField(required=False)
 
     def create(self, validated_data):
