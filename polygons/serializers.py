@@ -48,8 +48,8 @@ class GeometryFieldEPSG_32644(GeometryField):
 
 
 class GisPolygonSerializer(serializers.Serializer):
-    _created = serializers.DateTimeField(read_only=True)
-    _updated = serializers.DateTimeField(read_only=True)
+    _created = serializers.DateTimeField(read_only=True, format='%Y-%m-%d %H:%M:%S.%f')
+    _updated = serializers.DateTimeField(read_only=True, format='%Y-%m-%d %H:%M:%S.%f')
     id = serializers.IntegerField(read_only=True)
     class_id = serializers.IntegerField(required=False)
     name = serializers.CharField(max_length=200)

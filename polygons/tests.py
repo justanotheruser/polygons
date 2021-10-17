@@ -1,3 +1,4 @@
+import datetime
 import json
 from django.test import TestCase
 from django.urls import reverse
@@ -58,13 +59,38 @@ class PolygonDetailViewTest(TestCase):
         self.assertEqual(content['geom'], polygon['geom'])
 
     def test_trying_to_set_id(self):
-        pass
+        # Just in case real generated id will be the same
+        # we will use 2 non-consecutive ids
+        polygon_one = {'name': 'Lake', 'id': 42}
+        response_one = self.client.post(reverse('polygons:index'),
+                                        content_type='application/json',
+                                        data=polygon_one)
+        self.assertEqual(response_one.status_code, status.HTTP_201_CREATED)
+        polygon_two = {'name': 'Field', 'id': 41}
+        response_two = self.client.post(reverse('polygons:index'),
+                                        content_type='application/json',
+                                        data=polygon_two)
+        self.assertEqual(response_two.status_code, status.HTTP_201_CREATED)
+        content_one = json.loads(response_one.content)
+        content_two = json.loads(response_two.content)
+        assert content_one['id'] != polygon_one['id'] or \
+            content_two['id'] != polygon_two['id']
 
-    def test_trying_to_set_created(self):
-        pass
-
-    def test_trying_to_set_updated(self):
-        pass
+    def test_trying_to_set_created_and_updated(self):
+        future_time = datetime.datetime.utcnow() + datetime.timedelta(days=1)
+        polygon = {'name': 'Lake', '_created': str(
+            future_time), '_updated': str(future_time)}
+        response = self.client.post(reverse('polygons:index'),
+                                    content_type='application/json',
+                                    data=polygon)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        post_content = json.loads(response.content)
+        url = reverse('polygons:detail', kwargs={
+                      'polygon_id': post_content['id']})
+        response = self.client.get(url)
+        content = json.loads(response.content)
+        self.assertNotEqual(content['_created'], str(future_time))
+        self.assertNotEqual(content['_updated'], str(future_time))
 
     def test_class_id_geom_and_props_are_optional(self):
         polygon = {'name': 'Field'}
@@ -77,6 +103,15 @@ class PolygonDetailViewTest(TestCase):
                       'polygon_id': post_content['id']})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_name_is_required(self):
+        polygon = {'geom': {'polygon': 'POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))'}}
+        response = self.client.post(reverse('polygons:index'),
+                                    content_type='application/json',
+                                    data=polygon)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        post_content = json.loads(response.content)
+        self.assertEqual(post_content, {'name': ['This field is required.']})
 
     def test_polygon_not_found(self):
         url = reverse('polygons:detail', kwargs={'polygon_id': 1})
@@ -108,8 +143,8 @@ class PolygonDetailViewTest(TestCase):
         response = self.client.post(reverse('polygons:index'),
                                     content_type='application/json',
                                     data=polygon_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         post_content = json.loads(response.content)
-        print(post_content)
         url = reverse('polygons:detail', kwargs={
                       'polygon_id': post_content['id']})
         response = self.client.get(url, {'crs': 'epsg32644'})
@@ -121,8 +156,27 @@ class PolygonDetailViewTest(TestCase):
         get_polygon = shapely.wkt.loads(content['geom']['polygon'])
         assert post_polygon.almost_equals(get_polygon)
 
-    def test_post_polygon_with_unknowm_crs(self):
-        pass
+    def test_post_polygon_with_unknown_crs(self):
+        polygon_data = {'name': 'Lake',
+                        'geom': {'polygon': 'POLYGON ((0.5 0.5, 1 0.5, 1 1, 0.5 1, 0.5 0.5))',
+                                 'crs': 'EPSG:1111'}}
+        response = self.client.post(reverse('polygons:index'),
+                                    content_type='application/json',
+                                    data=polygon_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        post_content = json.loads(response.content)
+        self.assertEqual(post_content, {'geom': ['Incorrect CRS value EPSG:1111']})
 
     def test_get_polygon_with_unknown_crs(self):
-        pass
+        polygon_data = {'name': 'Lake'}
+        response = self.client.post(reverse('polygons:index'),
+                                    content_type='application/json',
+                                    data=polygon_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        post_content = json.loads(response.content)
+        url = reverse('polygons:detail', kwargs={
+                      'polygon_id': post_content['id']})
+        response = self.client.get(url, {'crs': 'epsg1111'})
+        content = json.loads(response.content)
+        self.assertEqual(content, 'Incorrect CRS value epsg1111')
+        

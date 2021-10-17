@@ -50,7 +50,7 @@ class DetailView(APIView):
             elif crs == CRS_EPSG_32644:
                 serializer = GisPolygonSerializerEPSG_32644(polygon)
             else:
-                return Response('Unknown CRS',
+                return Response('Incorrect CRS value %s' % crs,
                                 status=status.HTTP_400_BAD_REQUEST)
             print('serializer.data:', serializer.data)
             polygon_json = JSONRenderer().render(serializer.data)
