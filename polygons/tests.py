@@ -2,6 +2,7 @@ import json
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
+import shapely
 from .models import Session, GisPolygon
 
 
@@ -56,6 +57,15 @@ class PolygonDetailViewTest(TestCase):
         self.assertEqual(content['props'], polygon['props'])
         self.assertEqual(content['geom'], polygon['geom'])
 
+    def test_trying_to_set_id(self):
+        pass
+
+    def test_trying_to_set_created(self):
+        pass
+
+    def test_trying_to_set_updated(self):
+        pass
+
     def test_class_id_geom_and_props_are_optional(self):
         polygon = {'name': 'Field'}
         response = self.client.post(reverse('polygons:index'),
@@ -89,3 +99,30 @@ class PolygonDetailViewTest(TestCase):
         self.assertEqual(content['geom']['polygon'],
                          polygon['geom']['polygon'])
         self.assertEqual(content['geom']['crs'], 'EPSG:4326')
+
+    def test_post_and_get_polygon_with_crs_epsg_32644(self):
+        post_polygon_str = 'POLYGON ((0.5 0.5, 1 0.5, 1 1, 0.5 1, 0.5 0.5))'
+        polygon_data = {'name': 'Lake',
+                        'geom': {'polygon': post_polygon_str,
+                                 'crs': 'EPSG:32644'}}
+        response = self.client.post(reverse('polygons:index'),
+                                    content_type='application/json',
+                                    data=polygon_data)
+        post_content = json.loads(response.content)
+        print(post_content)
+        url = reverse('polygons:detail', kwargs={
+                      'polygon_id': post_content['id']})
+        response = self.client.get(url, {'crs': 'epsg32644'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Check that shape didn't change in any signigicant way after
+        # transformation to and from CRS used by DB
+        post_polygon = shapely.wkt.loads(post_polygon_str)
+        content = json.loads(response.content)
+        get_polygon = shapely.wkt.loads(content['geom']['polygon'])
+        assert post_polygon.almost_equals(get_polygon)
+
+    def test_post_polygon_with_unknowm_crs(self):
+        pass
+
+    def test_get_polygon_with_unknown_crs(self):
+        pass

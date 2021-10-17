@@ -2,29 +2,48 @@ import datetime
 from geoalchemy2.shape import from_shape, to_shape
 from rest_framework import serializers
 import shapely
+from shapely.ops import transform
+import pyproj
 from .models import GisPolygon
 
 
 class GeometryField(serializers.Field):
     """
-    Geomerty objects are serialized into shapely notation with CRS.
+    Geomerty objects are serialized from shapely notation with CRS.
     """
+    db_crs = 'EPSG:4326'
+    supported_crs_to_internal = ['EPSG:32644']    
 
     def to_internal_value(self, data):
         print('to_internal_value', data)
         polygon = shapely.wkt.loads(data['polygon'])
-        # if 'crs' in data and data['crs']
+        if 'crs' in data and data['crs'] != GeometryField.db_crs:
+            if data['crs'] in GeometryField.supported_crs_to_internal:
+                from_crs = pyproj.CRS(data['crs'])
+                to_crs = pyproj.CRS(GeometryField.db_crs)
+                project = pyproj.Transformer.from_crs(from_crs, to_crs, always_xy=True).transform
+                polygon = transform(project, polygon)
+            else:
+                msg = 'Incorrect CRS value %s'
+                raise serializers.ValidationError(msg % data['crs']) 
         return from_shape(polygon)
 
 
-class GeometryFieldEPSG4326(GeometryField):
-    """
-    Geomerty objects are serialized into shapely notation with CRS.
-    """
-
+class GeometryFieldEPSG_4326(GeometryField):
     def to_representation(self, value):
         polygon = to_shape(value)
         data = {'polygon': str(polygon), 'crs': 'EPSG:4326'}
+        return data
+
+
+class GeometryFieldEPSG_32644(GeometryField):
+    def to_representation(self, value):
+        polygon = to_shape(value)
+        from_crs =  pyproj.CRS(GeometryField.db_crs)
+        to_crs = 'EPSG:32644'
+        project = pyproj.Transformer.from_crs(from_crs, pyproj.CRS(to_crs), always_xy=True).transform
+        polygon = transform(project, polygon)
+        data = {'polygon': str(polygon), 'crs': to_crs}
         return data
 
 
@@ -48,5 +67,9 @@ class GisPolygonSerializer(serializers.Serializer):
         return instance
 
 
-class GisPolygonSerializerEPSG4326(GisPolygonSerializer):
-    geom = GeometryFieldEPSG4326(required=False)
+class GisPolygonSerializerEPSG_4326(GisPolygonSerializer):
+    geom = GeometryFieldEPSG_4326(required=False)
+
+
+class GisPolygonSerializerEPSG_32644(GisPolygonSerializer):
+    geom = GeometryFieldEPSG_32644(required=False)
