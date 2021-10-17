@@ -7,8 +7,8 @@ from rest_framework import status
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Session, GisPolygon, loads_polygon
-from .serializers import GisPolygonSerializer
+from .models import Session, GisPolygon
+from .serializers import GisPolygonSerializerEPSG4326
 
 
 class IndexView(APIView):
@@ -22,8 +22,7 @@ class IndexView(APIView):
         print(request.body)
         stream = io.BytesIO(request.body)
         data = JSONParser().parse(stream)
-        print(data)
-        serializer = GisPolygonSerializer(data=data)
+        serializer = GisPolygonSerializerEPSG4326(data=data)
         if not serializer.is_valid():
             return HttpResponse("Bad request", status_code=400)
         polygon = serializer.save()
@@ -39,8 +38,8 @@ class DetailView(APIView):
             polygon = session.query(GisPolygon).filter_by(
                 id=polygon_id).first()
             if polygon is None:
-                raise Http404("Polygon does not exist")
-            serializer = GisPolygonSerializer(polygon)
-            print(serializer.data)
+                return Response(status=status.HTTP_404_NOT_FOUND)
+            serializer = GisPolygonSerializerEPSG4326(polygon)
+            print('serializer.data:', serializer.data)
             polygon_json = JSONRenderer().render(serializer.data)
             return HttpResponse(polygon_json)
