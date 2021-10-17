@@ -1,2 +1,2 @@
 # polygons
-![alttext](https://ibb.co/fFp4HzV)
+![alttext](https://i.ibb.co/MSVM7xy/Screenshot-1.png)
