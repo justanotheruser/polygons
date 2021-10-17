@@ -19,7 +19,6 @@ class IndexView(APIView):
             return render(request, 'polygons/index.html', context)
 
     def post(self, request):
-        print(request.body)
         stream = io.BytesIO(request.body)
         data = JSONParser().parse(stream)
         serializer = GisPolygonSerializerEPSG_4326(data=data)
@@ -52,6 +51,22 @@ class DetailView(APIView):
             else:
                 return Response('Incorrect CRS value %s' % crs,
                                 status=status.HTTP_400_BAD_REQUEST)
-            print('serializer.data:', serializer.data)
             polygon_json = JSONRenderer().render(serializer.data)
-            return HttpResponse(polygon_json)
+            return HttpResponse(polygon_json, status=status.HTTP_200_OK)
+
+    def patch(self, request, polygon_id):
+        with Session() as session:
+            with session.begin():
+                existing_polygon = session.query(GisPolygon).filter_by(
+                    id=polygon_id).first()
+                if existing_polygon is None:
+                    return Response(status=status.HTTP_404_NOT_FOUND)
+                stream = io.BytesIO(request.body)
+                data = JSONParser().parse(stream)
+                serializer = GisPolygonSerializerEPSG_4326(existing_polygon, data=data)
+                if not serializer.is_valid():
+                    return Response(serializer.errors,
+                                    status=status.HTTP_400_BAD_REQUEST)
+                polygon = serializer.save()
+                session.add(polygon)
+                return Response(status=status.HTTP_200_OK)

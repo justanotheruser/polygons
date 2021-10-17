@@ -165,7 +165,8 @@ class PolygonDetailViewTest(TestCase):
                                     data=polygon_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         post_content = json.loads(response.content)
-        self.assertEqual(post_content, {'geom': ['Incorrect CRS value EPSG:1111']})
+        self.assertEqual(
+            post_content, {'geom': ['Incorrect CRS value EPSG:1111']})
 
     def test_get_polygon_with_unknown_crs(self):
         polygon_data = {'name': 'Lake'}
@@ -179,4 +180,30 @@ class PolygonDetailViewTest(TestCase):
         response = self.client.get(url, {'crs': 'epsg1111'})
         content = json.loads(response.content)
         self.assertEqual(content, 'Incorrect CRS value epsg1111')
-        
+
+    def test_update_polygon(self):
+        polygon = {'name': 'Lake', 'class_id': 1, 'props': {'prop1': 'value1'},
+                   'geom': {'polygon': 'POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))'}}
+        response = self.client.post(reverse('polygons:index'),
+                                    content_type='application/json',
+                                    data=polygon)
+        post_content = json.loads(response.content)
+        url = reverse('polygons:detail', kwargs={
+                      'polygon_id': post_content['id']})
+        response = self.client.get(url)
+        original_content = json.loads(response.content)        
+
+        patch = {'name': 'Baikal', 'class_id': 2, 'props': {'prop2': 'value2'},
+                 'geom': {'polygon': 'POLYGON ((0 0, 2 0, 2 2, 0 2, 0 0))'}}
+        response = self.client.patch(
+            url, content_type='application/json', data=patch)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.get(url)
+        patched_content = json.loads(response.content)
+
+        self.assertEqual(original_content['_created'], patched_content['_created'])
+        self.assertNotEqual(original_content['_updated'], patched_content['_updated'])
+        self.assertEqual(patched_content['name'], patch['name'])
+        self.assertEqual(patched_content['class_id'], patch['class_id'])
+        self.assertEqual(patched_content['props'], patch['props'])
+        self.assertEqual(patched_content['geom']['polygon'], patch['geom']['polygon'])
