@@ -147,7 +147,7 @@ class PolygonDetailViewTest(TestCase):
         post_content = json.loads(response.content)
         url = reverse('polygons:detail', kwargs={
             'polygon_id': post_content['id']})
-        response = self.client.get(url, {'crs': 'epsg32644'})
+        response = self.client.get(url, {'crs': 'epsg:32644'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # Check that shape didn't change in any signigicant way after
         # transformation to and from CRS used by DB
@@ -169,7 +169,8 @@ class PolygonDetailViewTest(TestCase):
             post_content, {'geom': ['Incorrect CRS value EPSG:1111']})
 
     def test_get_polygon_with_unknown_crs(self):
-        polygon_data = {'name': 'Lake'}
+        polygon_data = {'name': 'Lake',
+                        'geom': {'polygon': 'POLYGON ((0.5 0.5, 1 0.5, 1 1, 0.5 1, 0.5 0.5))'}}
         response = self.client.post(reverse('polygons:index'),
                                     content_type='application/json',
                                     data=polygon_data)
@@ -177,9 +178,9 @@ class PolygonDetailViewTest(TestCase):
         post_content = json.loads(response.content)
         url = reverse('polygons:detail', kwargs={
             'polygon_id': post_content['id']})
-        response = self.client.get(url, {'crs': 'epsg1111'})
+        response = self.client.get(url, {'crs': 'epsg:1111'})
         content = json.loads(response.content)
-        self.assertEqual(content, 'Incorrect CRS value epsg1111')
+        self.assertEqual(content, ['Incorrect CRS value epsg:1111'])
 
     def test_update_polygon(self):
         polygon = {'name': 'Lake', 'class_id': 1, 'props': {'prop1': 'value1'},

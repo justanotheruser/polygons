@@ -3,12 +3,12 @@ from rest_framework.parsers import JSONParser
 import json
 from django.http import HttpResponse, Http404
 from django.shortcuts import render
-from rest_framework import status
+from rest_framework import status, serializers
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Session, GisPolygon
-from .serializers import GisPolygonSerializerEPSG_4326, GisPolygonSerializerEPSG_32644
+from .serializers import GisPolygonSerializer
 
 
 class IndexView(APIView):
@@ -21,7 +21,7 @@ class IndexView(APIView):
     def post(self, request):
         stream = io.BytesIO(request.body)
         data = JSONParser().parse(stream)
-        serializer = GisPolygonSerializerEPSG_4326(data=data)
+        serializer = GisPolygonSerializer(data=data)
         if not serializer.is_valid():
             return Response(serializer.errors,
                             status=status.HTTP_400_BAD_REQUEST)
@@ -32,8 +32,7 @@ class IndexView(APIView):
             return Response({'id': polygon.id}, status=status.HTTP_201_CREATED)
 
 
-CRS_EPSG_4326 = 'epsg4326'
-CRS_EPSG_32644 = 'epsg32644'
+DEFAULT_CRS = 'epsg:4326'
 
 
 class DetailView(APIView):
@@ -43,15 +42,12 @@ class DetailView(APIView):
                 id=polygon_id).first()
             if polygon is None:
                 return Response(status=status.HTTP_404_NOT_FOUND)
-            crs = request.query_params.get('crs', CRS_EPSG_4326)
-            if crs == CRS_EPSG_4326:
-                serializer = GisPolygonSerializerEPSG_4326(polygon)
-            elif crs == CRS_EPSG_32644:
-                serializer = GisPolygonSerializerEPSG_32644(polygon)
-            else:
-                return Response('Incorrect CRS value %s' % crs,
-                                status=status.HTTP_400_BAD_REQUEST)
-            polygon_json = JSONRenderer().render(serializer.data)
+            crs = request.query_params.get('crs', DEFAULT_CRS)
+            try:
+                serializer = GisPolygonSerializer(polygon, context={'crs': crs})
+                polygon_json = JSONRenderer().render(serializer.data)
+            except serializers.ValidationError as e:
+                return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
             return HttpResponse(polygon_json, status=status.HTTP_200_OK)
 
     def patch(self, request, polygon_id):
@@ -63,7 +59,7 @@ class DetailView(APIView):
                     return Response(status=status.HTTP_404_NOT_FOUND)
                 stream = io.BytesIO(request.body)
                 data = JSONParser().parse(stream)
-                serializer = GisPolygonSerializerEPSG_4326(
+                serializer = GisPolygonSerializer(
                     existing_polygon, data=data, partial=True)
                 if not serializer.is_valid():
                     return Response(serializer.errors,
