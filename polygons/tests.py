@@ -46,13 +46,13 @@ class PolygonDetailViewTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         post_content = json.loads(response.content)
         url = reverse('polygons:detail', kwargs={
-                      'polygon_id': post_content['id']})
+            'polygon_id': post_content['id']})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         content = json.loads(response.content)
         assert content['_created'] is not None
         assert content['_updated'] is not None
-        self.assertEqual(content['id'],  post_content['id'])
+        self.assertEqual(content['id'], post_content['id'])
         self.assertEqual(content['name'], polygon['name'])
         self.assertEqual(content['class_id'], polygon['class_id'])
         self.assertEqual(content['props'], polygon['props'])
@@ -74,7 +74,7 @@ class PolygonDetailViewTest(TestCase):
         content_one = json.loads(response_one.content)
         content_two = json.loads(response_two.content)
         assert content_one['id'] != polygon_one['id'] or \
-            content_two['id'] != polygon_two['id']
+               content_two['id'] != polygon_two['id']
 
     def test_trying_to_set_created_and_updated(self):
         future_time = datetime.datetime.utcnow() + datetime.timedelta(days=1)
@@ -86,7 +86,7 @@ class PolygonDetailViewTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         post_content = json.loads(response.content)
         url = reverse('polygons:detail', kwargs={
-                      'polygon_id': post_content['id']})
+            'polygon_id': post_content['id']})
         response = self.client.get(url)
         content = json.loads(response.content)
         self.assertNotEqual(content['_created'], str(future_time))
@@ -100,7 +100,7 @@ class PolygonDetailViewTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         post_content = json.loads(response.content)
         url = reverse('polygons:detail', kwargs={
-                      'polygon_id': post_content['id']})
+            'polygon_id': post_content['id']})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -127,7 +127,7 @@ class PolygonDetailViewTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         post_content = json.loads(response.content)
         url = reverse('polygons:detail', kwargs={
-                      'polygon_id': post_content['id']})
+            'polygon_id': post_content['id']})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         content = json.loads(response.content)
@@ -146,7 +146,7 @@ class PolygonDetailViewTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         post_content = json.loads(response.content)
         url = reverse('polygons:detail', kwargs={
-                      'polygon_id': post_content['id']})
+            'polygon_id': post_content['id']})
         response = self.client.get(url, {'crs': 'epsg32644'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # Check that shape didn't change in any signigicant way after
@@ -176,7 +176,7 @@ class PolygonDetailViewTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         post_content = json.loads(response.content)
         url = reverse('polygons:detail', kwargs={
-                      'polygon_id': post_content['id']})
+            'polygon_id': post_content['id']})
         response = self.client.get(url, {'crs': 'epsg1111'})
         content = json.loads(response.content)
         self.assertEqual(content, 'Incorrect CRS value epsg1111')
@@ -189,7 +189,7 @@ class PolygonDetailViewTest(TestCase):
                                     data=polygon)
         post_content = json.loads(response.content)
         url = reverse('polygons:detail', kwargs={
-                      'polygon_id': post_content['id']})
+            'polygon_id': post_content['id']})
         response = self.client.get(url)
         original_content = json.loads(response.content)
 
@@ -211,6 +211,23 @@ class PolygonDetailViewTest(TestCase):
         self.assertEqual(patched_content['geom']
                          ['polygon'], patch['geom']['polygon'])
 
+    def test_partial_update(self):
+        polygon = {'name': 'Lake', 'class_id': 1}
+        response = self.client.post(reverse('polygons:index'),
+                                    content_type='application/json',
+                                    data=polygon)
+        post_content = json.loads(response.content)
+        url = reverse('polygons:detail', kwargs={
+            'polygon_id': post_content['id']})
+
+        patch = {'class_id': 2}
+        response = self.client.patch(
+            url, content_type='application/json', data=patch)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.get(url)
+        patched_content = json.loads(response.content)
+        self.assertEqual(patched_content['class_id'], patch['class_id'])
+
     def test_delete_polygon(self):
         polygon = {'name': 'Lake'}
         response = self.client.post(reverse('polygons:index'),
@@ -218,7 +235,7 @@ class PolygonDetailViewTest(TestCase):
                                     data=polygon)
         post_content = json.loads(response.content)
         url = reverse('polygons:detail', kwargs={
-                      'polygon_id': post_content['id']})
+            'polygon_id': post_content['id']})
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response = self.client.delete(url)

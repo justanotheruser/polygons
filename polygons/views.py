@@ -64,7 +64,7 @@ class DetailView(APIView):
                 stream = io.BytesIO(request.body)
                 data = JSONParser().parse(stream)
                 serializer = GisPolygonSerializerEPSG_4326(
-                    existing_polygon, data=data)
+                    existing_polygon, data=data, partial=True)
                 if not serializer.is_valid():
                     return Response(serializer.errors,
                                     status=status.HTTP_400_BAD_REQUEST)
